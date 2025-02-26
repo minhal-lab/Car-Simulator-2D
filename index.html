@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Car Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #6b7280;
+            overflow: hidden;
+        }
+        
+        #road {
+            position: absolute;
+            width: 80%;
+            height: 100%;
+            left: 10%;
+            background-color: #333;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        #road-markings {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            overflow: hidden;
+        }
+        
+        .road-line {
+            position: absolute;
+            width: 10px;
+            height: 60px;
+            background-color: white;
+            left: calc(50% - 5px);
+        }
+        
+        .roadside {
+            position: absolute;
+            width: 10%;
+            height: 100%;
+            background-color: #4b5320;
+        }
+        
+        #left-grass {
+            left: 0;
+        }
+        
+        #right-grass {
+            right: 0;
+        }
+        
+        #car {
+            position: absolute;
+            width: 50px;
+            height: 100px;
+            bottom: 120px;
+            left: calc(50% - 25px);
+            z-index: 10;
+            transform-origin: center bottom;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 100'%3E%3Crect x='10' y='20' width='30' height='70' rx='8' fill='%23dc2626'/%3E%3Crect x='12' y='25' width='26' height='20' rx='3' fill='%23e5e7eb'/%3E%3Crect x='12' y='50' width='26' height='5' fill='%23111827'/%3E%3Crect x='5' y='70' width='40' height='10' rx='2' fill='%23374151'/%3E%3Ccircle cx='12' cy='85' r='8' fill='%23000'/%3E%3Ccircle cx='12' cy='85' r='3' fill='%23374151'/%3E%3Ccircle cx='38' cy='85' r='8' fill='%23000'/%3E%3Ccircle cx='38' cy='85' r='3' fill='%23374151'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            transition: transform 0.1s ease;
+        }
+        
+        .obstacle {
+            position: absolute;
+            width: 50px;
+            height: 100px;
+            z-index: 5;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 100'%3E%3Crect x='10' y='20' width='30' height='70' rx='8' fill='%230284c7'/%3E%3Crect x='12' y='25' width='26' height='20' rx='3' fill='%23e5e7eb'/%3E%3Crect x='12' y='50' width='26' height='5' fill='%23111827'/%3E%3Crect x='5' y='70' width='40' height='10' rx='2' fill='%23374151'/%3E%3Ccircle cx='12' cy='85' r='8' fill='%23000'/%3E%3Ccircle cx='12' cy='85' r='3' fill='%23374151'/%3E%3Ccircle cx='38' cy='85' r='8' fill='%23000'/%3E%3Ccircle cx='38' cy='85' r='3' fill='%23374151'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+        }
+        
+        .tree {
+            position: absolute;
+            width: 40px;
+            height: 80px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 80'%3E%3Crect x='17' y='50' width='6' height='30' fill='%23854d0e'/%3E%3Cpolygon points='20,0 0,45 40,45' fill='%2316a34a'/%3E%3Cpolygon points='20,15 5,50 35,50' fill='%2322c55e'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            z-index: 1;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+        }
+        
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+            font-weight: bold;
+            touch-action: manipulation;
+            user-select: none;
+            border: 3px solid #fff;
+            color: #333;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        #dashboard {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 200px;
+            z-index: 20;
+        }
+        
+        #score, #speed {
+            margin: 5px 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        #speed-bar {
+            width: 100%;
+            height: 12px;
+            background-color: #6b7280;
+            border-radius: 6px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        #speed-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #4ade80, #f59e0b, #ef4444);
+            border-radius: 6px;
+            transition: width 0.3s linear;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            min-width: 300px;
+            z-index: 100;
+        }
+        
+        #game-over h2 {
+            color: #ef4444;
+            font-size: 36px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+        
+        #final-score {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        
+        #restart-btn {
+            background-color: #22c55e;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        #restart-btn:hover {
+            background-color: #16a34a;
+            transform: translateY(-2px);
+        }
+        
+        #restart-btn:active {
+            transform: translateY(0);
+        }
+        
+        .explosion {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Ccircle cx='60' cy='60' r='40' fill='%23f59e0b'/%3E%3Ccircle cx='60' cy='60' r='30' fill='%23ef4444'/%3E%3Ccircle cx='60' cy='60' r='20' fill='%23fef08a'/%3E%3Cpath d='M60,10 L65,30 L80,15 L70,40 L100,30 L75,50 L95,70 L65,65 L75,100 L55,75 L35,105 L45,70 L10,80 L40,60 L5,40 L40,35 L25,10 L55,25 Z' fill='%23f59e0b'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            z-index: 50;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="road">
+            <div id="road-markings"></div>
+        </div>
+        <div class="roadside" id="left-grass"></div>
+        <div class="roadside" id="right-grass"></div>
+        <div id="car"></div>
+        
+        <div id="dashboard">
+            <div id="score">Score: 0</div>
+            <div id="speed">Speed: 0 mph</div>
+            <div id="speed-bar">
+                <div id="speed-fill"></div>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <div class="control-btn" id="left-btn">←</div>
+            <div class="control-btn" id="right-btn">→</div>
+        </div>
+        
+        <div id="game-over">
+            <h2>GAME OVER</h2>
+            <p id="final-score">Score: 0</p>
+            <button id="restart-btn">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state and configuration
+        const gameState = {
+            score: 0,
+            speed: 0,
+            maxSpeed: 120,
+            acceleration: 0.5,
+            isGameOver: false,
+            lastFrameTime: 0,
+            carPosition: 50,
+            moveLeft: false,
+            moveRight: false,
+            roadWidth: 80,
+            roadLeft: 10,
+            collisionDetected: false,
+            frameCount: 0
+        };
+        
+        // Game elements
+        const elements = {
+            gameContainer: document.getElementById('game-container'),
+            car: document.getElementById('car'),
+            road: document.getElementById('road'),
+            roadMarkings: document.getElementById('road-markings'),
+            scoreDisplay: document.getElementById('score'),
+            speedDisplay: document.getElementById('speed'),
+            speedFill: document.getElementById('speed-fill'),
+            leftBtn: document.getElementById('left-btn'),
+            rightBtn: document.getElementById('right-btn'),
+            gameOverScreen: document.getElementById('game-over'),
+            finalScoreDisplay: document.getElementById('final-score'),
+            restartBtn: document.getElementById('restart-btn')
+        };
+        
+        // Game objects
+        const gameObjects = {
+            obstacles: [],
+            trees: [],
+            roadLines: []
+        };
+        
+        // Initialize road markings
+        function initRoadMarkings() {
+            const roadHeight = window.innerHeight;
+            const lineSpacing = 120; // Space between lines
+            const linesCount = Math.ceil(roadHeight / lineSpacing) + 1;
+            
+            // Clear existing lines
+            elements.roadMarkings.innerHTML = '';
+            gameObjects.roadLines = [];
+            
+            // Create initial road lines
+            for (let i = 0; i < linesCount; i++) {
+                createRoadLine(i * lineSpacing);
+            }
+        }
+        
+        // Create a single road line
+        function createRoadLine(yPos) {
+            const line = document.createElement('div');
+            line.className = 'road-line';
+            line.style.top = `${yPos}px`;
+            elements.roadMarkings.appendChild(line);
+            
+            gameObjects.roadLines.push({
+                element: line,
+                y: yPos
+            });
+        }
+        
+        // Move road lines to create scrolling effect
+        function moveRoadLines(deltaTime) {
+            const moveSpeed = 300 * (gameState.speed / gameState.maxSpeed + 0.5) * deltaTime;
+            const roadHeight = window.innerHeight;
+            
+            for (let i = gameObjects.roadLines.length - 1; i >= 0; i--) {
+                const line = gameObjects.roadLines[i];
+                line.y += moveSpeed;
+                line.element.style.top = `${line.y}px`;
+                
+                // If line is off screen, remove it and add a new one at the top
+                if (line.y > roadHeight) {
+                    line.element.remove();
+                    gameObjects.roadLines.splice(i, 1);
+                    
+                    // Get position of the topmost line and place new line above it
+                    let topLinePos = Number.MAX_VALUE;
+                    for (const roadLine of gameObjects.roadLines) {
+                        topLinePos = Math.min(topLinePos, roadLine.y);
+                    }
+                    
+                    createRoadLine(topLinePos - 120);
+                }
+            }
+        }
+        
+        // Create a new obstacle
+        function createObstacle() {
+            if (gameState.isGameOver) return;
+            
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            
+            // Random position on the road - keep away from edges
+            const roadLeftEdge = gameState.roadLeft + 5;
+            const roadRightEdge = gameState.roadLeft + gameState.roadWidth - 5;
+            const usableRoadWidth = roadRightEdge - roadLeftEdge;
+            
+            // Create 3 lanes and place obstacles in those lanes
+            const lanes = [
+                roadLeftEdge + usableRoadWidth * 0.17,
+                roadLeftEdge + usableRoadWidth * 0.5,
+                roadLeftEdge + usableRoadWidth * 0.83
+            ];
+            
+            const lane = Math.floor(Math.random() * 3);
+            const posX = lanes[lane];
+            
+            obstacle.style.left = `calc(${posX}% - 25px)`;
+            obstacle.style.top = '-120px'; // Start above the screen
+            
+            elements.gameContainer.appendChild(obstacle);
+            
+            gameObjects.obstacles.push({
+                element: obstacle,
+                x: posX,
+                y: -120,
+                width: 50,
+                height: 100,
+                active: true
+            });
+        }
+        
+        // Create a tree (decorative)
+        function createTree() {
+            if (gameState.isGameOver) return;
+            
+            const tree = document.createElement('div');
+            tree.className = 'tree';
+            
+            // Random side (left or right)
+            const side = Math.random() > 0.5 ? 'left' : 'right';
+            let posX;
+            
+            if (side === 'left') {
+                posX = Math.random() * 8 + 1; // Position in left grass area
+            } else {
+                posX = Math.random() * 8 + 91; // Position in right grass area
+            }
+            
+            tree.style.left = `${posX}%`;
+            tree.style.top = '-80px';
+            
+            elements.gameContainer.appendChild(tree);
+            
+            gameObjects.trees.push({
+                element: tree,
+                x: posX,
+                y: -80
+            });
+        }
+        
+        // Move obstacles
+        function moveGameObjects(deltaTime) {
+            const baseSpeed = 300 * deltaTime;
+            const speedMultiplier = gameState.speed / gameState.maxSpeed + 0.5;
+            const moveAmount = baseSpeed * speedMultiplier;
+            const screenHeight = window.innerHeight;
+            
+            // Move obstacles
+            for (let i = gameObjects.obstacles.length - 1; i >= 0; i--) {
+                const obstacle = gameObjects.obstacles[i];
+                
+                if (obstacle.active) {
+                    obstacle.y += moveAmount;
+                    obstacle.element.style.top = `${obstacle.y}px`;
+                    
+                    // Remove obstacle if it's off screen
+                    if (obstacle.y > screenHeight + 50) {
+                        obstacle.element.remove();
+                        gameObjects.obstacles.splice(i, 1);
+                    }
+                }
+            }
+            
+            // Move trees
+            for (let i = gameObjects.trees.length - 1; i >= 0; i--) {
+                const tree = gameObjects.trees[i];
+                
+                tree.y += moveAmount * 0.9; // Trees move slightly slower
+                tree.element.style.top = `${tree.y}px`;
+                
+                // Remove tree if it's off screen
+                if (tree.y > screenHeight + 50) {
+                    tree.element.remove();
+                    gameObjects.trees.splice(i, 1);
+                }
+            }
+        }
+        
+        // Check for collisions between car and obstacles
+        function checkCollisions() {
+            if (gameState.isGameOver || gameState.collisionDetected) return;
+            
+            // Get car position and dimensions
+            const carRect = elements.car.getBoundingClientRect();
+            const carLeft = carRect.left;
+            const carRight = carRect.right;
+            const carTop = carRect.top;
+            const carBottom = carRect.bottom;
+            
+            // Check all active obstacles
+            for (const obstacle of gameObjects.obstacles) {
+                if (!obstacle.active) continue;
+                
+                const obstacleRect = obstacle.element.getBoundingClientRect();
+                const obstacleLeft = obstacleRect.left;
+                const obstacleRight = obstacleRect.right;
+                const obstacleTop = obstacleRect.top;
+                const obstacleBottom = obstacleRect.bottom;
+                
+                // Simple rectangle collision detection
+                // Add a 10px buffer to make collisions more forgiving
+                if (
+                    carLeft + 10 < obstacleRight - 10 &&
+                    carRight - 10 > obstacleLeft + 10 &&
+                    carTop + 10 < obstacleBottom - 15 &&
+                    carBottom - 15 > obstacleTop + 10
+                ) {
+                    gameState.collisionDetected = true;
+                    triggerGameOver(carRect);
+                    break;
+                }
+            }
+        }
+        
+        // Create explosion effect
+        function createExplosion(x, y) {
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.style.left = `${x}px`;
+            explosion.style.top = `${y}px`;
+            
+            elements.gameContainer.appendChild(explosion);
+            
+            // Animate the explosion
+            let opacity = 0;
+            let scale = 0.1;
+            
+            const animate = () => {
+                if (opacity < 1 && scale < 0.5) {
+                    opacity += 0.1;
+                    scale += 0.05;
+                } else if (scale < 1.2) {
+                    scale += 0.05;
+                } else {
+                    opacity -= 0.1;
+                }
+                
+                explosion.style.opacity = opacity;
+                explosion.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                
+                if (opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    explosion.remove();
+                }
+            };
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Game over handler
+        function triggerGameOver(carRect) {
+            gameState.isGameOver = true;
+            
+            // Show explosion at car position
+            const centerX = carRect.left + carRect.width / 2;
+            const centerY = carRect.top + carRect.height / 2;
+            createExplosion(centerX, centerY);
+            
+            // Tilt the car
+            elements.car.style.transform = 'rotate(20deg)';
+            
+            // Update game over screen
+            elements.finalScoreDisplay.textContent = `Score: ${gameState.score}`;
+            
+            // Show game over screen after a short delay
+            setTimeout(() => {
+                elements.gameOverScreen.style.display = 'block';
+            }, 1000);
+        }
+        
+        // Reset the game state
+        function resetGameState() {
+            // Reset game state
+            gameState.score = 0;
+            gameState.speed = 0;
+            gameState.isGameOver = false;
+            gameState.carPosition = 50;
+            gameState.moveLeft = false;
+            gameState.moveRight = false;
+            gameState.collisionDetected = false;
+            gameState.frameCount = 0;
+            
+            // Reset car position and appearance
+            elements.car.style.left = `calc(${gameState.carPosition}% - 25px)`;
+            elements.car.style.transform = 'rotate(0deg)';
+            
+            // Reset displays
+            elements.scoreDisplay.textContent = `Score: ${gameState.score}`;
+            elements.speedDisplay.textContent = `Speed: ${gameState.speed} mph`;
+            elements.speedFill.style.width = '0%';
+            elements.gameOverScreen.style.display = 'none';
+            
+            // Clear all game objects
+            clearGameObjects();
+            
+            // Initialize road markings
+            initRoadMarkings();
+        }
+        
+        // Clear all game objects
+        function clearGameObjects() {
+            // Clear obstacles
+            gameObjects.obstacles.forEach(obstacle => {
+                if (obstacle.element) {
+                    obstacle.element.remove();
+                }
+            });
+            gameObjects.obstacles = [];
+            
+            // Clear trees
+            gameObjects.trees.forEach(tree => {
+                if (tree.element) {
+                    tree.element.remove();
+                }
+            });
+            gameObjects.trees = [];
+            
+            // Remove any explosions
+            const explosions = document.querySelectorAll('.explosion');
+            explosions.forEach(explosion => explosion.remove());
+        }
+        
+        // Game loop
+        function gameLoop(timestamp) {
+            // Calculate delta time (time since last frame in seconds)
+            if (!gameState.lastFrameTime) {
+                gameState.lastFrameTime = timestamp;
+            }
+            const deltaTime = (timestamp - gameState.lastFrameTime) / 1000;
+            gameState.lastFrameTime = timestamp;
+            
+            // Cap delta time to avoid huge jumps if tab loses focus
+            const cappedDelta = Math.min(deltaTime, 0.1);
+            
+            if (!gameState.isGameOver) {
+                // Update car position
+                if (gameState.moveLeft && gameState.carPosition > gameState.roadLeft + 5) {
+                    const moveAmount = 60 * cappedDelta;
+                    gameState.carPosition -= moveAmount;
+                    elements.car.style.transform = 'rotate(-5deg)';
+                } else if (gameState.moveRight && gameState.carPosition < gameState.roadLeft + gameState.roadWidth - 5) {
+                    const moveAmount = 60 * cappedDelta;
+                    gameState.carPosition += moveAmount;
+                    elements.car.style.transform = 'rotate(5deg)';
+                } else {
+                    elements.car.style.transform = 'rotate(0deg)';
+                }
+                
+                elements.car.style.left = `calc(${gameState.carPosition}% - 25px)`;
+                
+                // Update game objects
+                moveRoadLines(cappedDelta);
+                moveGameObjects(cappedDelta);
+                
+                // Check for collisions
+                checkCollisions();
+                
+                // Update speed and score
+                if (gameState.speed < gameState.maxSpeed) {
+                    gameState.speed += gameState.acceleration;
+                    elements.speedDisplay.textContent = `Speed: ${Math.floor(gameState.speed)} mph`;
+                    elements.speedFill.style.width = `${(gameState.speed / gameState.maxSpeed) * 100}%`;
+                }
+                
+                // Update score based on distance traveled
+                gameState.score += Math.floor(gameState.speed * cappedDelta * 0.2);
+                elements.scoreDisplay.textContent = `Score: ${gameState.score}`;
+                
+                // Create obstacles and trees at intervals
+                gameState.frameCount++;
+                
+                if (gameState.frameCount % 120 === 0) {
+                    createObstacle();
+                }
+                
+                if (gameState.frameCount % 60 === 0) {
+                    createTree();
+                }
+            }
+            
+            // Continue game loop
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize the game
+        function initGame() {
+            // Reset the game state
+            resetGameState();
+            
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Event listeners for keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                gameState.moveLeft = true;
+            } else if (e.key === 'ArrowRight') {
+                gameState.moveRight = true;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') {
+                gameState.moveLeft = false;
+            } else if (e.key === 'ArrowRight') {
+                gameState.moveRight = false;
+            }
+        });
+        
+        // Touch controls for mobile
+        elements.leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            gameState.moveLeft = true;
+        }, { passive: false });
+        
+        elements.leftBtn.addEventListener('touchend', () => {
+            gameState.moveLeft = false;
+        });
+        
+        elements.rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            gameState.moveRight = true;
+        }, { passive: false });
+        
+        elements.rightBtn.addEventListener('touchend', () => {
+            gameState.moveRight = false;
+        });
+        
+        // Mouse controls for buttons
+        elements.leftBtn.addEventListener('mousedown', () => {
+            gameState.moveLeft = true;
+        });
+        
+        elements.leftBtn.addEventListener('mouseup', () => {
+            gameState.moveLeft = false;
+        });
+        
+        elements.leftBtn.addEventListener('mouseleave', () => {
+            gameState.moveLeft = false;
+        });
+        
+        elements.rightBtn.addEventListener('mousedown', () => {
+            gameState.moveRight = true;
+        });
+        
+        elements.rightBtn.addEventListener('mouseup', () => {
+            gameState.moveRight = false;
+        });
+        
+        elements.rightBtn.addEventListener('mouseleave', () => {
+            gameState.moveRight = false;
+        });
+        
+        // Restart button
+        elements.restartBtn.addEventListener('click', initGame);
+        
+        // Handle browser resizing
+        window.addEventListener('resize', () => {
+            // Reinitialize road markings on resize
+            initRoadMarkings();
+        });
+        
+        // Prevent scrolling on touch devices
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#controls')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Initialize the game when the window loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
